@@ -2,10 +2,12 @@
 
 #include <iostream>
 #include <string>
+#include <omp.h>
 #define NUM_ROWS 14
 #define NUM_COLORS 14
 #define NUM_COLUMNS 3
 #define NUM_PUZZLES 6
+#define TARGET_PUZZLE 2
 
 using namespace std;
 
@@ -13,7 +15,7 @@ class Puzzle {
 public:
     int slices[NUM_ROWS][NUM_COLUMNS];
     int occurences[NUM_COLORS];
-    int timesRotated[NUM_ROWS];
+    int timesModified[NUM_ROWS];
     bool success;
     string message;
     
@@ -21,9 +23,9 @@ public:
         int tmp;
 
         tmp = slice[0];
-        slice[0] = slice[1];
-        slice[1] = slice[2];
-        slice[2] = tmp;
+        slice[0] = slice[2];
+        slice[2] = slice[1];
+        slice[1] = tmp;
 
         return slice;
     }
@@ -162,8 +164,18 @@ Puzzle puzzles[NUM_PUZZLES] = {
     }),
 };
 
-int main()
-{
+static int flip1[2] = { 0, 1 };
+static int flip2[2] = { 1, 2 };
+static int possibleFlips[6][2] = {
+    *flip1,
+    *flip2,
+    *flip1,
+    *flip2,
+    *flip1,
+    *flip2
+};
+
+int main() {
     int i, j, k, n;
 #pragma omp parallel for num_threads(NUM_PUZZLES) private(i) private(j) private(k) private(n)
     for (i = 0; i < NUM_PUZZLES; i++) {
@@ -173,18 +185,32 @@ int main()
                 n = puzzles[i].slices[k][j];
                 puzzles[i].occurences[n - 1]++;
 
-                // if there is more than one occurence of integer n in column j of puzzle i, rotate row k.
+                // if there is more than one occurence of integer n in column j of puzzle i, modify row k.
                 if (puzzles[i].occurences[n - 1] > 1) {
-                    puzzles[i].timesRotated[k]++;
-                    if (puzzles[i].timesRotated[k] < 3) {
-                        puzzles[i].rotateSlice(puzzles[i].slices[k]);
+                    if (omp_get_thread_num() == TARGET_PUZZLE)
+                        cout << "[Puzzle " << i + 1 << "] occurences of " << n << " in column " << j + 1 << " are " << puzzles[i].occurences[n - 1] << ".\n";
+                    if (puzzles[i].timesModified[k] < 6) {
+                        
+                        if (omp_get_thread_num() == TARGET_PUZZLE)
+                            cout << "[Puzzle " << i+1 << "] old slice " << k+1 << ": " << puzzles[i].slices[k][0] << " " << puzzles[i].slices[k][1] << " " << puzzles[i].slices[k][2] << '\n';
 
+                        //puzzles[i].rotateSlice(puzzles[i].slices[k]);
+                        puzzles[i].flipSlice(puzzles[i].slices[k], possibleFlips[puzzles[i].timesModified[k]][0], possibleFlips[puzzles[i].timesModified[k]][1]);
+                        puzzles[i].timesModified[k]++;
+
+                        if (omp_get_thread_num() == TARGET_PUZZLE)
+                            cout << "[Puzzle " << i+1 << "] new slice " << k+1 << ": " << puzzles[i].slices[k][0] << " " << puzzles[i].slices[k][1] << " " << puzzles[i].slices[k][2] << '\n';
+                        
                         // reset iterators and occurence count.
                         k = j = 0;
-                        memset(puzzles[i].occurences, 0, NUM_COLORS);
+                        for (int p = 0; p < 14; p++) {
+                            puzzles[i].occurences[p] = 0;
+                        }
                     }
-                    // we've rotated slice k too many times, so there's no solution.
+                    // we've modified slice k too many times, so there's no solution.
                     else {
+                        if (omp_get_thread_num() == TARGET_PUZZLE)
+                            cout << "[Puzzle " << i + 1 << "] Slice modified too many times. Giving up.\n";
                         puzzles[i].success = false;
                     }
                 }
@@ -194,7 +220,6 @@ int main()
                 puzzles[i].occurences[p] = 0;
             }
         }
-
             if (puzzles[i].success /*|| true*/) {
                 puzzles[i].message = "\nPuzzle " + to_string(i+1) + " has a solution:\n";
                 for (int l = 0; l < NUM_ROWS; l++) {
@@ -208,13 +233,13 @@ int main()
             }
             else
                 puzzles[i].message = "\nPuzzle " + to_string(i + 1) + " has no solution.";
-        }
+    }
 #pragma omp single
-    {
+  {
     cout << "Puzzle solutions:";
     for (int m = 0; m < 6; m++) {
         cout << puzzles[m].message;
     }
-    }
+  }
     return 0;
 }
