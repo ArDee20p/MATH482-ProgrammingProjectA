@@ -1,4 +1,5 @@
 #include "Puzzle.h"
+#include <math.h>
 #include <string>
 
     int* Puzzle::rotateSlice(int* slice) {
