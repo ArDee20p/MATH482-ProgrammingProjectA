@@ -65,6 +65,147 @@ int findSol(int n, int colors, int *puz) {
 }
 
 
+
+int findSolPar(int n, int colors, int *puz, int pdeg) {
+    int ploops = 1;
+    for (int i = 0; i < pdeg; i++) ploops *= 3;
+
+    int start = 1 + pdeg;
+    int foundSol = 0;
+
+    #pragma omp parallel for shared(puz, foundSol)
+    for (int prefix = 0; prefix < ploops; prefix++) {
+        char orientation[n];
+        for (int i = 0; i < n; i++) orientation[i] = 0;
+
+        char occurrences[colors];
+        for (int r = prefix, i = 1; r > 0; r /= 3) {
+            occurrences[i++] = r % 3;
+        }
+
+        while (1) {
+            int bad = 0;
+            for (int c = 0; c < 3; c++) {
+                for (int i = 0; i < colors; i++) occurrences[i] = 0;
+                for (int s = 0; s < n; s++) {
+                    int color = puz[3 * s + (c + orientation[s]) % 3];
+                    occurrences[color - 1]++;
+
+                    if (occurrences[color - 1] > 1) {
+                        bad = 1;
+                        break;
+                    }
+                }
+
+                if (bad) break;
+            }
+
+            if (!bad) {
+                #pragma omp critical
+                if (!foundSol) {
+                    for (int s = 0; s < n; s++) {
+                        for (; orientation[s] > 0; orientation[s]--) {
+                            int first = puz[3 * s];
+                            puz[3 * s] = puz[3 * s + 1];
+                            puz[3 * s + 1] = puz[3 * s + 2];
+                            puz[3 * s + 2] = first;
+                        }
+                    }
+
+                    foundSol = 1;
+                }
+            }
+
+            if (foundSol) break;
+
+            int done = 1;
+            for (int i = start; i < n; i++) {
+                if (orientation[i] < 2) {
+                    orientation[i]++;
+                    done = 0;
+                    break;
+                }
+
+                orientation[i] = 0;
+            }
+
+            if (done) break;
+        }
+    }
+
+    return foundSol;
+}
+
+
+
+int findSolFlip(int n, int colors, int *puz) {
+    char orientation[n];
+    for (int i = 0; i < n; i++) orientation[i] = 0;
+
+    char occurances[colors];
+
+    while (1) {
+        int bad = 0;
+        for (int c = 0; c < 3; c++) {
+            for (int i = 0; i < colors; i++) occurances[i] = 0;
+            for (int s = 0; s < n; s++) {
+                int ct = (c + orientation[s] % 3) % 3;
+                if (orientation[s] >= 3) {
+                    // swap cols 0,2
+                    ct = 2 - ct;
+                }
+
+                int color = puz[3 * s + ct];
+                occurances[color - 1]++;
+
+                if (occurances[color - 1] > 1) {
+                    bad = 1;
+                    break;
+                }
+            }
+
+            if (bad) break;
+        }
+
+        if (!bad) {
+            for (int s = 0; s < n; s++) {
+                if (orientation[s] >= 3) {
+                    int first = puz[3 * s];
+                    puz[3 * s] = puz[3 * s + 2];
+                    puz[3 * s + 2] = first;
+                    orientation[s] -= 3;
+                }
+
+                for (; orientation[s] > 0; orientation[s]--) {
+                    int first = puz[3 * s];
+                    puz[3 * s] = puz[3 * s + 1];
+                    puz[3 * s + 1] = puz[3 * s + 2];
+                    puz[3 * s + 2] = first;
+                }
+            }
+
+            return 1;
+        }
+
+        int done = 1;
+        for (int i = 1; i < n; i++) {
+            if (orientation[i] < 5) {
+                orientation[i]++;
+                done = 0;
+                break;
+            }
+
+            orientation[i] = 0;
+        }
+
+        if (done) {
+            return 0;
+        }
+    }
+}
+
+
+
 int puzzleSlices[6 * 14 * 3] = {
     //Puzzle One
     12,     9,      7,
@@ -162,7 +303,7 @@ int puzzleSlices[6 * 14 * 3] = {
 int main() {
     for (int i = 0; i < 6; i++) {
         int *puz = &puzzleSlices[3 * 14 * i];
-        if (findSol(14, 14, puz)) {
+        if (findSolPar(14, 14, puz, 2)) {
             printf("Found solution for puzzle %d\n", i+1);
             printPuz(14, puz);
         } else {
