@@ -1,23 +1,35 @@
 //COMP482 - Programming Project Part A - Pizza Slice Instant Insanity - Spring 2022
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <omp.h>
-#define NUM_ROWS 14
-#define NUM_COLORS 14
-#define NUM_COLUMNS 3
-#define NUM_PUZZLES 6
-#define TARGET_PUZZLE 2
+#include <math.h>
+#include <sstream>
+
+#define M_PI            3.14159265358979323846
+#define NUM_ROWS        14
+#define NUM_COLORS      14
+#define NUM_COLUMNS     3
+#define NUM_PUZZLES     6
+#define TARGET_PUZZLE   1
 
 using namespace std;
 
 class Puzzle {
 public:
     int slices[NUM_ROWS][NUM_COLUMNS];
-    int occurences[NUM_COLORS];
-    int timesModified[NUM_ROWS];
-    bool success;
-    string message;
+    int solution[NUM_ROWS][NUM_COLUMNS] = {
+            0,0,0,0,0,0,0,0,0,0,
+            0,0,0,0,0,0,0,0,0,0,
+            0,0,0,0,0,0,0,0,0,0
+    };
+    int occurences[NUM_COLORS] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+    int collisions[NUM_COLORS] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+    int timesModified[NUM_ROWS] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+    bool success = true;
+    bool backtrack = false;
+    string message = " ";
     
     int* rotateSlice(int* slice) {
         int tmp;
@@ -39,130 +51,77 @@ public:
 
         return slice;
     }
+
+    bool checkOccurences() {
+        for (int i = 0; i < 14; i++) {
+            if (occurences[i] > 1) {
+                success = false;
+                return success;
+            }
+        }
+        success = true;
+        return success;
+    }
+
+    void resetIteration() {
+        for (int i = 0; i < NUM_ROWS; i++) {
+            occurences[i] = 0;
+        }
+    }
+
+    void printPuzzles(int i) {
+            cout << "Puzzle " + to_string(i + 1) + "\n";
+            for (int j = 0; j < NUM_ROWS; j++) {
+                cout << "[";
+                for (int k = 0; k < NUM_COLUMNS; k++) {
+                    cout << to_string(slices[j][k]);
+                    if (k < NUM_COLUMNS - 1) cout << ",\t";
+                }
+                cout << "]\n";
+            }
+            cout << "\n";
+    }
+
+    void printSolution(int i) {
+        if (success) {
+            message = "\nPuzzle " + to_string(i + 1) + " has a solution:\n";
+            for (int i = 0; i < NUM_ROWS; i++) {
+                message += "[";
+                for (int j = 0; j < NUM_COLUMNS; j++) {
+                    message += to_string(slices[i][j]);
+                    if (j < NUM_COLUMNS - 1) message += ",\t";
+                }
+                message += "]\n";
+            }
+        }
+        else
+            message = "\nPuzzle " + to_string(i + 1) + " has no solution.";
+    }
 };
 
-Puzzle puzzles[NUM_PUZZLES] = {
-        Puzzle({
-        { 12,     9,      7,
-        4,      2,      13,
-        11,     8,      6,
-        3,      1,      12,
-        10,     7,      5,
-        2,      14,     11,
-        9,      6,      4,
-        1,      13,     10,
-        7,      5,      2,
-        14,     11,     9,
-        6,      4,      1,
-        13,     10,     8,
-        5,      3,      14,
-        12,     8,      3, },
-        {0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0},
-        true,
-        " "
-    }),
-        Puzzle({
-        { 9,      4,      13,
-        8,      3,      12,
-        7,      2,      11,
-        6,      1,      10,
-        5,      14,     9,
-        4,      13,     8,
-        2,      11,     6,
-        1,      10,     5,
-        14,     9,      4,
-        13,     8,      3,
-        12,     7,      2,
-        11,     6,      1,
-        3,      12,     7,
-        10,     5,      14 },
-        {0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0},
-        true,
-        " "
-    }),
-        Puzzle({
-        { 11,     7,      4,
-        14,     10,     7,
-        3,      13,     10,
-        6,      2,      13,
-        9,      5,      2,
-        12,     8,      5,
-        1,      11,     8,
-        4,      14,     11,
-        7,      3,      14,
-        10,     6,      3,
-        13,     9,      6,
-        2,      12,     9,
-        5,      12,     8,
-        1,      4,      1 },
-        {0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0},
-        true,
-        " "
-    }),
-        Puzzle({
-        { 3,      5,      8,
-        10,     13,     1,
-        3,      6,      8,
-        11,     13,     2,
-        4,      6,      9,
-        11,     14,     2,
-        5,      7,      9,
-        12,     14,     3,
-        5,      8,      10,
-        12,     1,      6,
-        11,     13,     1,
-        4,      9,      14,
-        2,      4,      7,
-        12,     7,      10 },
-        {0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0},
-        true,
-        " "
-    }),
-        Puzzle({
-        {4,      8,      12,
-        2,      6,      10,
-        14,     4,      8,
-        11,     1,      5,
-        9,      13,     3,
-        7,      11,     1,
-        4,      8,      12,
-        2,      6,      10,
-        14,     11,     1,
-        5,      9,      13,
-        3,      7,      12,
-        2,      6,      10,
-        14,     5,      9,
-        13,     3,      7},
-        {0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0},
-        true,
-        " "
-    }),
-        Puzzle({
-        {  11,     8,      5,
-        2,      13,     10,
-        7,      4,      1,
-        12,     9,      6,
-        3,      14,     11,
-        8,      4,      1,
-        12,     9,      6,
-        3,      14,     11,
-        8,      5,      2,
-        13,     10,     7,
-        4,      1,      12,
-        5,      2,      13,
-        10,     7,      9,
-        6,      3,      14 },
-        {0,0,0,0,0,0,0,0,0,0},
-        {0,0,0,0,0,0,0,0,0,0},
-        true,
-        " "
-    }),
-};
+Puzzle puzzles[NUM_PUZZLES];
+
+int puzzleFunction(int n, int puzz) {
+    switch (puzz) {
+    case 0:
+        return 1 + (int)floor(n * 4 * M_PI * M_PI) % 14;
+        break;
+    case 1:
+        return 1 + (int)floor(n * 5 * exp(2)) % 14;
+        break;
+    case 2:
+        return 1 + (int)floor(n * 4 * exp(3)) % 14;
+        break;
+    case 3:
+        return 1 + (int)floor(n * 5 * exp(3)) % 14;
+        break;
+    case 4:
+        return 1 + (int)floor(n * 10 * exp(2)) % 14;
+        break;
+    case 5:
+        return 1 + (int)floor(n * 11 * exp(3)) % 14;
+    }
+}
 
 static int flip1[2] = { 0, 1 };
 static int flip2[2] = { 1, 2 };
@@ -176,7 +135,44 @@ static int possibleFlips[6][2] = {
 };
 
 int main() {
-    int i, j, k, n;
+    int i, j, k, n, num;
+    bool check;
+
+    //puzzle generation
+#pragma omp parallel for num_threads(NUM_PUZZLES) private(i) private(j) private(k) private(n) private(check)
+    for (i = 0; i < NUM_PUZZLES; i++) {
+        n = 1;
+        check = false;
+        for (k = 0; k < NUM_ROWS; k++) {
+            for (j = 0; j < NUM_COLUMNS; j++) {
+                while (!check) {
+                    num = puzzleFunction(n, i);
+                    if (puzzles[i].occurences[num - 1] >= 3) {
+                        check = false;
+                        n++;
+                    }
+                    else if (puzzles[i].occurences[num - 1] < 3) {
+                        puzzles[i].slices[k][j] = num;
+                        n++;
+                        puzzles[i].occurences[num - 1] += 1;
+                        check = true;
+                    }
+                }
+                check = false;
+            }
+        }
+        puzzles[i].resetIteration();
+    }
+
+#pragma omp single
+    {
+        cout << "All puzzles generated:\n";
+        for (i = 0; i < NUM_PUZZLES; i++) {
+            puzzles[i].printPuzzles(i);
+        }
+    }
+
+    //puzzle solving
 #pragma omp parallel for num_threads(NUM_PUZZLES) private(i) private(j) private(k) private(n)
     for (i = 0; i < NUM_PUZZLES; i++) {
         for (j = 0; j < NUM_COLUMNS; j++) {
@@ -189,50 +185,14 @@ int main() {
                 if (puzzles[i].occurences[n - 1] > 1) {
                     if (omp_get_thread_num() == TARGET_PUZZLE)
                         cout << "[Puzzle " << i + 1 << "] occurences of " << n << " in column " << j + 1 << " are " << puzzles[i].occurences[n - 1] << ".\n";
-                    if (puzzles[i].timesModified[k] < 6) {
-                        
-                        if (omp_get_thread_num() == TARGET_PUZZLE)
-                            cout << "[Puzzle " << i+1 << "] old slice " << k+1 << ": " << puzzles[i].slices[k][0] << " " << puzzles[i].slices[k][1] << " " << puzzles[i].slices[k][2] << '\n';
-
-                        //puzzles[i].rotateSlice(puzzles[i].slices[k]);
+                   
                         puzzles[i].flipSlice(puzzles[i].slices[k], possibleFlips[puzzles[i].timesModified[k]][0], possibleFlips[puzzles[i].timesModified[k]][1]);
                         puzzles[i].timesModified[k]++;
-
-                        if (omp_get_thread_num() == TARGET_PUZZLE)
-                            cout << "[Puzzle " << i+1 << "] new slice " << k+1 << ": " << puzzles[i].slices[k][0] << " " << puzzles[i].slices[k][1] << " " << puzzles[i].slices[k][2] << '\n';
-                        
-                        // reset iterators and occurence count.
-                        k = j = 0;
-                        for (int p = 0; p < 14; p++) {
-                            puzzles[i].occurences[p] = 0;
-                        }
-                    }
-                    // we've modified slice k too many times, so there's no solution.
-                    else {
-                        if (omp_get_thread_num() == TARGET_PUZZLE)
-                            cout << "[Puzzle " << i + 1 << "] Slice modified too many times. Giving up.\n";
-                        puzzles[i].success = false;
-                    }
                 }
             }
-            //once we are done iterating through the rows of column j, reset the occurences counter.
-            for (int p = 0; p < 14; p++) {
-                puzzles[i].occurences[p] = 0;
-            }
+            puzzles[i].resetIteration();
         }
-            if (puzzles[i].success /*|| true*/) {
-                puzzles[i].message = "\nPuzzle " + to_string(i+1) + " has a solution:\n";
-                for (int l = 0; l < NUM_ROWS; l++) {
-                    puzzles[i].message += "[";
-                    for (int m = 0; m < NUM_COLUMNS; m++) {
-                        puzzles[i].message += to_string(puzzles[i].slices[l][m]);
-                        if (m < NUM_COLUMNS - 1) puzzles[i].message += ",\t";
-                    }
-                    puzzles[i].message += "]\n";
-                }
-            }
-            else
-                puzzles[i].message = "\nPuzzle " + to_string(i + 1) + " has no solution.";
+        puzzles[i].printSolution(i);
     }
 #pragma omp single
   {
