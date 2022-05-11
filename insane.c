@@ -1,17 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void printPuz(int n, int *puz) {
+void printPuz(int n, int puz[][3]) {
     for (int s = 0; s < n; s++) {
         for (int c = 0; c < 3; c++) {
-            printf("%d\t", puz[s * 3 + c]);
+            printf("%d\t", puz[s][c]);
         }
 
         printf("\n");
     }
 }
 
-int findSol(int n, int colors, int *puz) {
+int findSol(int n, int colors, int puz[][3]) {
     char orientation[n];
     for (int i = 0; i < n; i++) orientation[i] = 0;
 
@@ -22,7 +22,7 @@ int findSol(int n, int colors, int *puz) {
         for (int c = 0; c < 3; c++) {
             for (int i = 0; i < colors; i++) occurances[i] = 0;
             for (int s = 0; s < n; s++) {
-                int color = puz[3 * s + (c + orientation[s]) % 3];
+                int color = puz[s][(c + orientation[s]) % 3];
                 occurances[color - 1]++;
 
                 if (occurances[color - 1] > 1) {
@@ -37,10 +37,10 @@ int findSol(int n, int colors, int *puz) {
         if (!bad) {
             for (int s = 0; s < n; s++) {
                 for (; orientation[s] > 0; orientation[s]--) {
-                    int first = puz[3 * s];
-                    puz[3 * s] = puz[3 * s + 1];
-                    puz[3 * s + 1] = puz[3 * s + 2];
-                    puz[3 * s + 2] = first;
+                    int first = puz[s][0];
+                    puz[s][0] = puz[s][1];
+                    puz[s][1] = puz[s][2];
+                    puz[s][2] = first;
                 }
             }
 
@@ -66,7 +66,7 @@ int findSol(int n, int colors, int *puz) {
 
 
 
-int findSolPar(int n, int colors, int *puz, int pdeg) {
+int findSolPar(int n, int colors, int puz[][3], int pdeg) {
     int ploops = 1;
     for (int i = 0; i < pdeg; i++) ploops *= 3;
 
@@ -88,7 +88,7 @@ int findSolPar(int n, int colors, int *puz, int pdeg) {
             for (int c = 0; c < 3; c++) {
                 for (int i = 0; i < colors; i++) occurrences[i] = 0;
                 for (int s = 0; s < n; s++) {
-                    int color = puz[3 * s + (c + orientation[s]) % 3];
+                    int color = puz[s][(c + orientation[s]) % 3];
                     occurrences[color - 1]++;
 
                     if (occurrences[color - 1] > 1) {
@@ -105,10 +105,10 @@ int findSolPar(int n, int colors, int *puz, int pdeg) {
                 if (!foundSol) {
                     for (int s = 0; s < n; s++) {
                         for (; orientation[s] > 0; orientation[s]--) {
-                            int first = puz[3 * s];
-                            puz[3 * s] = puz[3 * s + 1];
-                            puz[3 * s + 1] = puz[3 * s + 2];
-                            puz[3 * s + 2] = first;
+                            int first = puz[s][0];
+                            puz[s][0] = puz[s][1];
+                            puz[s][1] = puz[s][2];
+                            puz[s][2] = first;
                         }
                     }
 
@@ -138,7 +138,7 @@ int findSolPar(int n, int colors, int *puz, int pdeg) {
 
 
 
-int findSolFlip(int n, int colors, int *puz) {
+int findSolFlip(int n, int colors, int puz[][3]) {
     char orientation[n];
     for (int i = 0; i < n; i++) orientation[i] = 0;
 
@@ -155,7 +155,7 @@ int findSolFlip(int n, int colors, int *puz) {
                     ct = 2 - ct;
                 }
 
-                int color = puz[3 * s + ct];
+                int color = puz[s][ct];
                 occurances[color - 1]++;
 
                 if (occurances[color - 1] > 1) {
@@ -170,17 +170,17 @@ int findSolFlip(int n, int colors, int *puz) {
         if (!bad) {
             for (int s = 0; s < n; s++) {
                 if (orientation[s] >= 3) {
-                    int first = puz[3 * s];
-                    puz[3 * s] = puz[3 * s + 2];
-                    puz[3 * s + 2] = first;
+                    int first = puz[s][0];
+                    puz[s][0] = puz[s][2];
+                    puz[s][2] = first;
                     orientation[s] -= 3;
                 }
 
                 for (; orientation[s] > 0; orientation[s]--) {
-                    int first = puz[3 * s];
-                    puz[3 * s] = puz[3 * s + 1];
-                    puz[3 * s + 1] = puz[3 * s + 2];
-                    puz[3 * s + 2] = first;
+                    int first = puz[s][0];
+                    puz[s][0] = puz[s][1];
+                    puz[s][1] = puz[s][2];
+                    puz[s][2] = first;
                 }
             }
 
@@ -206,7 +206,7 @@ int findSolFlip(int n, int colors, int *puz) {
 
 
 
-int puzzleSlices[6 * 14 * 3] = {
+int puzzleSlices[6][14][3] = {
     //Puzzle One
     12,     9,      7,
     4,      2,      13,
@@ -302,10 +302,10 @@ int puzzleSlices[6 * 14 * 3] = {
 
 int main() {
     for (int i = 0; i < 6; i++) {
-        int *puz = &puzzleSlices[3 * 14 * i];
-        if (findSolPar(14, 14, puz, 2)) {
+        /* int puz[3] = &puzzleSlices[3 * 14 * i]; */
+        if (findSolPar(14, 14, puzzleSlices[i], 2)) {
             printf("Found solution for puzzle %d\n", i+1);
-            printPuz(14, puz);
+            printPuz(14, puzzleSlices[i]);
         } else {
             printf("No solution for puzzle %d\n", i+1);
         }
