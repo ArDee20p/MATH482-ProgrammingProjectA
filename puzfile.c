@@ -12,7 +12,7 @@ int writePuz(FILE *fp, int n, int puz[][3]) {
    return 1;
 }
 
-int writePuzFile(char *fname, int n, int puz[][3]) {
+int writePuzFile(char const *fname, int n, int puz[][3]) {
     FILE *fp = fopen(fname, "w");
     if (!fp) return 0;
     int result = writePuz(fp, n, puz);
@@ -30,9 +30,9 @@ int readPuz(FILE *fp, int maxSize, int out[][3]) {
     return s;
 }
 
-int readPuzFile(char *fname, int (**out)[3]) {
+int readPuzFile(char const *fname, int (**out)[3]) {
     int size = getPuzSize(fname);
-    int (*puz)[3] = malloc(size * 3 * sizeof(int));
+    int (*puz)[3] = (int (*)[3]) malloc(size * 3 * sizeof(int));
     if (!puz) return -1;
 
     FILE *fp = fopen(fname, "r");
@@ -47,7 +47,7 @@ int readPuzFile(char *fname, int (**out)[3]) {
     return sizeRead;
 }
 
-int getPuzSize(char *fname) {
+int getPuzSize(char const *fname) {
     FILE *fp = fopen(fname, "r");
     if (!fp) return -1;
 

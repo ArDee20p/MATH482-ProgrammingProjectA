@@ -1,6 +1,7 @@
 #include "Puzzle.h"
 #include <math.h>
 #include <string>
+#include "puzfile.h"
 
     int* Puzzle::rotateSlice(int* slice) {
         int tmp;
@@ -124,6 +125,7 @@
             std::cout << "All puzzles generated:\n";
             for (i = 0; i < NUM_PUZZLES; i++) {
                 puzzles[i].printPuzzles(i);
+                writePuzFile(("puzzles/puzzle-" + std::to_string(i + 1) + ".txt").c_str(), NUM_ROWS, puzzles[i].slices);
             }
         }
         return puzzles;
