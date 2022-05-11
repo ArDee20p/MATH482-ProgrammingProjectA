@@ -197,8 +197,11 @@ int findSolFlip(int n, int colors, int puz[][3]) {
 
 
 int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Pass a puzzle file\n");
+        return 1;
+    }
 
-    if (argc < 2) printf("Put a \n");
     int (*puz)[3];
     int size = readPuzFile(argv[1], &puz);
 
