@@ -212,9 +212,9 @@ int main(int argc, char *argv[]) {
         printf("No solution for puzzle %s\n", argv[1]);
         printf("Trying with flipping...\n");
         if (findSolFlip(size, size, puz)) {
-            printf("Invalid puzzle %s\n");
-        } else {
             writePuz(stdout, size, puz);
+        } else {
+            printf("Invalid puzzle %s\n", argv[1]);
         }
     }
 
