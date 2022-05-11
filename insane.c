@@ -1,15 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-void printPuz(int n, int puz[][3]) {
-    for (int s = 0; s < n; s++) {
-        for (int c = 0; c < 3; c++) {
-            printf("%d\t", puz[s][c]);
-        }
-
-        printf("\n");
-    }
-}
+#include "puzfile.h"
 
 int findSol(int n, int colors, int puz[][3]) {
     char orientation[n];
@@ -302,10 +293,9 @@ int puzzleSlices[6][14][3] = {
 
 int main() {
     for (int i = 0; i < 6; i++) {
-        /* int puz[3] = &puzzleSlices[3 * 14 * i]; */
         if (findSolPar(14, 14, puzzleSlices[i], 2)) {
             printf("Found solution for puzzle %d\n", i+1);
-            printPuz(14, puzzleSlices[i]);
+            writePuz(stdout, 14, puzzleSlices[i]);
         } else {
             printf("No solution for puzzle %d\n", i+1);
         }
